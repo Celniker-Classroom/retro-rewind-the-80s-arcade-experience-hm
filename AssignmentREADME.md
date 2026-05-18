@@ -1,4 +1,4 @@
-# 🕹️ Project: Retro Rewind – The 80s Arcade Experience
+ 🕹️ Project: Retro Rewind – The 80s Arcade Experience
 
 Welcome to your next AP Computer Science Principles project! Step into a time machine and travel back to the 1980s—the "Golden Age" of video games. 
 
