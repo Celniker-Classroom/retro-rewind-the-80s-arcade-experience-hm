@@ -50,24 +50,28 @@ main.court::before {
   cursor: pointer;
 }
 
-#start-screen.hidden {
+#start-screen.hidden,
+#lose-screen.hidden {
   display: none;
 }
 
-#start-screen h1 {
+#start-screen h1,
+#lose-screen h1 {
   font-size: 48px;
- margin-right: 200px;
+  margin-right: 200px;
 }
 
-#start-screen p {
+#start-screen p,
+#lose-screen p {
   font-size: 30px;
   margin-right: 200px;
   max-width: 80vw;
   text-shadow: 3px 3px 5px rgba(0, 0, 0, 0.7);
-  
 }
 
-#start-button {
+#start-button,
+#lose-button,
+#lose-button {
   padding: 18px 28px;
   font-size: 20px;
   font-weight: bold;
@@ -79,6 +83,18 @@ main.court::before {
   margin-right: 200px;
 }
 
-#start-button:hover {
+#start-button:hover,
+#lose-button:hover {
   background: rgba(255, 255, 255, 0.1);
+}
+
+#lose-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.7);
+  text-align: center;
 }
