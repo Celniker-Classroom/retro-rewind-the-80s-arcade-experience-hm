@@ -20,8 +20,8 @@ let lastHoopSpawnWorldX = -Infinity;
 const hoopSpacing = 500; // world pixels between hoops
 const hoopMin = 0.18;
 const hoopMax = 0.78;
-// Height of hoop as fraction of screen height. Reduced to make hoops much smaller.
-const hoopHeight = 0.12;
+// Height of hoop as fraction of screen height. Increased so the hoop image and hitbox are bigger.
+const hoopHeight = 0.18;
 
 // How forgiving the hoop pass check is (fraction of hoop draw height)
 const HOOP_PASS_TOLERANCE_FRACTION = 0.6;
@@ -261,3 +261,17 @@ const startButton = document.getElementById('start-button');
 if (startButton) startButton.addEventListener('click', startGame);
 const loseButton = document.getElementById('lose-button');
 if (loseButton) loseButton.addEventListener('click', returnToStart);
+const instructionsButton = document.getElementById('instructions-button');
+const closeInstructionsButton = document.getElementById('close-instructions');
+const instructionsPopup = document.getElementById('instructions-popup');
+
+function showInstructions() {
+  if (instructionsPopup) instructionsPopup.classList.remove('hidden');
+}
+
+function hideInstructions() {
+  if (instructionsPopup) instructionsPopup.classList.add('hidden');
+}
+
+if (instructionsButton) instructionsButton.addEventListener('click', showInstructions);
+if (closeInstructionsButton) closeInstructionsButton.addEventListener('click', hideInstructions);

@@ -71,7 +71,7 @@ main.court::before {
 
 #start-button,
 #lose-button,
-#lose-button {
+#close-instructions {
   padding: 18px 28px;
   font-size: 20px;
   font-weight: bold;
@@ -84,8 +84,50 @@ main.court::before {
 }
 
 #start-button:hover,
-#lose-button:hover {
+#lose-button:hover,
+#close-instructions:hover {
   background: rgba(255, 255, 255, 0.1);
+}
+
+#instructions-button {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  padding: 14px 20px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: 2px solid white;
+  background: rgba(0, 0, 0, 0.75);
+  color: white;
+  cursor: pointer;
+}
+
+#instructions-popup {
+  position: absolute;
+  bottom: 100px;
+  right: 24px;
+  width: min(360px, calc(100vw - 48px));
+  background: rgba(255, 255, 255, 0.95);
+  color: black;
+  border: 2px solid #333;
+  border-radius: 12px;
+  padding: 18px;
+  text-align: left;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+#instructions-popup.hidden {
+  display: none;
+}
+
+#instructions-popup h2 {
+  margin-top: 0;
+  font-size: 24px;
+}
+
+#instructions-popup p {
+  margin: 8px 0;
+  font-size: 18px;
 }
 
 #lose-screen {
