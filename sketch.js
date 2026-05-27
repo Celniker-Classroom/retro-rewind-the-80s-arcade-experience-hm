@@ -24,7 +24,7 @@ function getGroupClass() {
 }
 
 // Game layout and physics
-const hoopSpacing = 700;
+const hoopSpacing = 500;
 const hoopMin = 0.18;
 const hoopMax = 0.78;
 const hoopHeight = 0.18;
@@ -302,14 +302,33 @@ function keyPressed() {
 function spawnHoop() {
   const SpriteClass = getSpriteClass();
   const hoopY = random(hoopMin * height, hoopMax * height);
-  if (!SpriteClass) return;
-
-  const hoop = new SpriteClass(hoopImage, width + 120, hoopY);
+  const targetX = width + 120;
   const targetHeight = height * hoopHeight;
-  hoop.scale = targetHeight / hoopImage.height * 1.1;
-  hoop.passed = false;
-  if (hoopGroup && typeof hoopGroup.push === 'function') {
-    hoopGroup.push(hoop);
+
+  if (SpriteClass && hoopImage) {
+    const hoop = new SpriteClass(hoopImage, targetX, hoopY);
+    hoop.scale = targetHeight / hoopImage.height * 1.1;
+    hoop.passed = false;
+    if (hoopGroup) {
+      if (typeof hoopGroup.push === 'function') hoopGroup.push(hoop);
+      else if (typeof hoopGroup.add === 'function') hoopGroup.add(hoop);
+    }
+    return;
+  }
+
+  // Fallback: create plain hoop object and add to plain array
+  if (!hoopImage) return;
+  const plainHoop = {
+    x: targetX,
+    y: hoopY,
+    image: hoopImage,
+    scale: targetHeight / hoopImage.height * 1.1,
+    passed: false,
+    width: hoopImage.width * (targetHeight / hoopImage.height * 1.1),
+    height: hoopImage.height * (targetHeight / hoopImage.height * 1.1)
+  };
+  if (Array.isArray(hoopGroup)) {
+    hoopGroup.push(plainHoop);
   }
 }
 
