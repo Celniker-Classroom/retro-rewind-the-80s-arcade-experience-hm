@@ -29,7 +29,7 @@ const hoopMin = 0.18;
 const hoopMax = 0.78;
 const hoopHeight = 0.18;
 // Vertical scoring tolerance 
-const hoopHitbox = 1;
+const hoopHitbox = 0.85;
 const HoopHitboxReduction = 0.7;
 
 let strikes = 0;
