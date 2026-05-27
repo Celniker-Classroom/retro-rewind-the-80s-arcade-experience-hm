@@ -230,19 +230,11 @@ function checkHoopCollisions() {
     if (hoop.passed) continue;
 
     const hoopX = (typeof hoop.x === 'number') ? hoop.x : (hoop.position?.x ?? 0);
-    const hoopY = (typeof hoop.y === 'number') ? hoop.y : (hoop.position?.y ?? 0);
     const hoopW = hoop.width ?? (hoop.image ? (hoop.image.width * (hoop.scale ?? 1)) : 0);
-    const hoopH = hoop.height ?? (hoop.image ? (hoop.image.height * (hoop.scale ?? 1)) : 0);
+    const ballX = ballSprite.x ?? ballSprite.position?.x ?? 0;
 
-    const ballX = ballSprite.x ?? ballSprite.position?.x ?? ballSprite.x;
-    const ballY = ballSprite.y ?? ballSprite.position?.y ?? ballSprite.y;
-    const ballW = ballSprite.width ?? (ballSprite.image ? (ballSprite.image.width * (ballSprite.scale ?? 1)) : ballSize);
-    const ballH = ballSprite.height ?? (ballSprite.image ? (ballSprite.image.height * (ballSprite.scale ?? 1)) : ballSize);
-
-    const overlapX = Math.abs(ballX - hoopX) < (ballW * 0.5 + hoopW * 0.4);
-    const overlapY = Math.abs(ballY - hoopY) < (hoopH * 0.35 + ballH * 0.5);
-
-    if (overlapX && overlapY) {
+    // Trigger scoring/strike only after the ball has fully passed the hoop's right edge
+    if (ballX > hoopX + hoopW * 0.5) {
       handleHoopCollision(ballSprite, hoop);
     }
   }
