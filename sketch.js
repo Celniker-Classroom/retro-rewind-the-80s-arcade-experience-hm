@@ -1,105 +1,136 @@
+let gameStarted = false;
+let courtBackground = null;
+let ballImage = null;
+let courtImage = null;
+let hoopImage = null;
 
-let gameStarted = false; 
-let courtBackground = null; 
-let ballImage = null;       
-let courtImage = null;       
-let hoopImage = null;        
+let ballSprite = null;
+let hoopGroup = null;
+let ballVy = 0;
+let ballIsSprite = false;
 
-// Ball position and movement
-let ballX = 0;               
-let ballY = 0;              
-let ballVelocityY = 0;       
+function getSpriteClass() {
+  if (typeof Sprite !== 'undefined') return Sprite;
+  if (typeof Q5 !== 'undefined' && Q5.Sprite) return Q5.Sprite;
+  if (typeof window !== 'undefined' && window.Sprite) return window.Sprite;
+  return null;
+}
 
-let worldX = 0;              
-let ballWorldX = 0;        
+function getGroupClass() {
+  if (typeof Group !== 'undefined') return Group;
+  if (typeof Q5 !== 'undefined' && Q5.Group) return Q5.Group;
+  if (typeof window !== 'undefined' && window.Group) return window.Group;
+  return null;
+}
 
-// Hoops generation and tracking
-let hoops = [];
-let lastHoopSpawnWorldX = -Infinity;
-
-const hoopSpacing = 500; // world pixels between hoops
+// Game layout and physics
+const hoopSpacing = 700;
 const hoopMin = 0.18;
 const hoopMax = 0.78;
-// Height of hoop as fraction of screen height. Increased so the hoop image and hitbox are bigger.
 const hoopHeight = 0.18;
+const hoopHitbox = 0.25;
+const HoopHitboxReduction = 0.7;
 
-// How forgiving the hoop pass check is (fraction of hoop draw height)
-const HOOP_PASS_TOLERANCE_FRACTION = 0.6;
-
-// Player strikes (misses)
 let strikes = 0;
-const threeStrikes = 3;
-
-// Player score (successful passes)
+const maxStrikes = 3;
 let score = 0;
 
 const ballSize = 72;
 const gravity = 0.8;
-const jump = -12;
-
+const jumpForce = -12;
 const minHorizontalSpeed = 5;
 const maxHorizontalSpeed = 30;
-const speedIncreasePerPoint = 0.25;
+const speedIncreasePerPoint = 0.15;
 const ballLocation = 0.3;
 
+let worldX = 0;
+let distanceSinceLastHoop = 0;
 
 function preload() {
   ballImage = loadImage('basketball.png');
-  
   courtImage = loadImage('pixelbasketballcourt.png');
   hoopImage = loadImage('basketballHoop.png');
 }
 
-
 function setup() {
-
   const canvas = createCanvas(windowWidth, windowHeight);
   canvas.parent(document.querySelector('main'));
   imageMode(CENTER);
-}
-
-
-function windowResized() {
-  resizeCanvas(windowWidth, windowHeight);
-  if (gameStarted) {
-    if (courtImage) courtBackground = courtImage;
-    ballX = width * ballLocation;
-    ballY = height / 2;
-    ballVelocityY = 0;
+  const GroupClass = getGroupClass();
+  if (GroupClass) {
+    hoopGroup = new GroupClass();
+  } else {
+    hoopGroup = []; // fallback to plain array when q5play Group missing
   }
 }
 
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  if (gameStarted && ballSprite) {
+    ballSprite.x = width * ballLocation;
+    ballSprite.y = height / 2;
+    ballVy = 0;
+  }
+}
 
 function startGame() {
   gameStarted = true;
- 
   hideScreen('lose-screen');
   hideScreen('start-screen');
 
- 
   worldX = 0;
-  if (courtImage) courtBackground = courtImage;
-  else courtBackground = null;
-  ballWorldX = worldX + width * ballLocation;
-  ballX = width * ballLocation;
-  ballY = height / 2;
-  ballVelocityY = 0;
-  // reset hoops
-  hoops = [];
-  lastHoopSpawnWorldX = worldX;
-  // reset strikes each game
+  distanceSinceLastHoop = 0;
   strikes = 0;
-  // reset score each game
   score = 0;
-}
 
+  if (ballSprite) {
+    if (ballIsSprite && typeof ballSprite.delete === 'function') {
+      ballSprite.delete();
+    }
+    ballSprite = null;
+  }
+
+  if (!hoopGroup) {
+    const GroupClass = getGroupClass();
+    if (GroupClass) hoopGroup = new GroupClass();
+  }
+  clearHoops();
+
+  const SpriteClass = getSpriteClass();
+  ballVy = 0;
+  if (SpriteClass && ballImage) {
+    ballIsSprite = true;
+    ballSprite = new SpriteClass(ballImage, width * ballLocation, height / 2);
+    ballSprite.scale = ballSize / ballImage.width;
+    ballSprite.friction = 0;
+    ballSprite.visible = true;
+    ballSprite.passed = false;
+  } else if (ballImage) {
+    // fallback plain object ball
+    ballIsSprite = false;
+    ballSprite = {
+      x: width * ballLocation,
+      y: height / 2,
+      width: ballSize,
+      height: ballSize,
+      image: ballImage,
+      scale: ballSize / ballImage.width,
+      passed: false
+    };
+  } else {
+    console.error('Unable to create ball: missing ball image.');
+    gameStarted = false;
+    showScreen('start-screen');
+    return;
+  }
+
+  spawnHoop();
+}
 
 function endGame() {
   gameStarted = false;
-  const loseScreen = document.getElementById('lose-screen');
-  if (loseScreen) loseScreen.classList.remove('hidden');
+  showScreen('lose-screen');
 }
-
 
 function returnToStart() {
   gameStarted = false;
@@ -108,16 +139,13 @@ function returnToStart() {
   hideScreen('lose-screen');
 }
 
-
 function draw() {
- 
   if (courtImage) {
     push();
     imageMode(CORNER);
     const scale = height / courtImage.height;
     const imgW = courtImage.width * scale;
-    
-    let xOffset = - (worldX % imgW);
+    let xOffset = -(worldX % imgW);
     if (xOffset > 0) xOffset -= imgW;
     for (let x = xOffset; x < width; x += imgW) {
       image(courtImage, x, 0, imgW, height);
@@ -131,73 +159,129 @@ function draw() {
 
   const currentSpeed = min(maxHorizontalSpeed, minHorizontalSpeed + score * speedIncreasePerPoint);
   worldX += currentSpeed;
-  ballWorldX += currentSpeed;
+  distanceSinceLastHoop += currentSpeed;
 
-  // spawn a new hoop every hoopSpacing world pixels
-  if (worldX - lastHoopSpawnWorldX >= hoopSpacing) {
+  if (distanceSinceLastHoop >= hoopSpacing) {
     spawnHoop();
-    lastHoopSpawnWorldX = worldX;
+    distanceSinceLastHoop = 0;
   }
 
-  // draw hoops 
-  for (let i = hoops.length - 1; i >= 0; i--) {
-    const hoop = hoops[i];
-    const screenX = hoop.worldX - worldX;
-    if (!hoop.passed && screenX <= ballX) {
-      const hH = height * hoopHeight;
-      const allowed = hH * 0.35; // allowed vertical distance to count as a pass
-      if (Math.abs(ballY - hoop.y) <= allowed) {
-        // successful pass
-        hoop.passed = true;
-        score += 1;
-      } else {
-        // missed the hoop
-        hoop.passed = true;
-        strikes += 1;
-        if (strikes >= threeStrikes) {
-          endGame();
+  if (hoopGroup) {
+    for (let i = hoopGroup.length - 1; i >= 0; i--) {
+      const hoop = hoopGroup[i];
+      // move hoop (q5play sprite uses .x or .position.x)
+      if (typeof hoop.x === 'number') {
+        hoop.x -= currentSpeed;
+      } else if (hoop.position && typeof hoop.position.x === 'number') {
+        hoop.position.x -= currentSpeed;
+      }
+
+      const hoopX = (typeof hoop.x === 'number') ? hoop.x : (hoop.position?.x ?? 0);
+      const hoopW = hoop.width ?? (hoop.image ? (hoop.image.width * (hoop.scale ?? 1)) : 0);
+      if (hoopX < -hoopW) {
+        if (typeof hoop.delete === 'function') {
+          hoop.delete();
+        } else {
+          // remove from plain array
+          hoopGroup.splice(i, 1);
         }
       }
     }
-    if (hoopImage) {
-      const drawH = height * hoopHeight;
-      const drawW = hoopImage.width * (drawH / hoopImage.height);
-      // remove when off left side
-      if (screenX < -drawW) { hoops.splice(i, 1); continue; }
-      push();
-      imageMode(CENTER);
-      image(hoopImage, screenX, hoop.y, drawW, drawH);
-      pop();
-    } else {
-      const drawH = height * hoopHeight;
-      const drawW = drawH * 1.2;
-      if (screenX < -drawW) { hoops.splice(i, 1); continue; }
-      push();
-      noStroke();
-      fill(200, 50, 50);
-      rectMode(CENTER);
-      rect(screenX, hoop.y, drawW, drawH);
-      pop();
+  }
+
+  if (ballSprite) {
+    ballVy += gravity;
+    ballSprite.y += ballVy;
+    checkHoopCollisions();
+
+    if (isBallOffScreen(ballSprite.x, ballSprite.y)) {
+      endGame();
     }
   }
 
-  ballVelocityY += gravity;
-  ballY += ballVelocityY;
+  // draw fallback plain ball if not a sprite
+  if (!ballIsSprite && ballSprite) {
+    push();
+    imageMode(CENTER);
+    image(ballSprite.image, ballSprite.x, ballSprite.y, ballSprite.image.width * ballSprite.scale, ballSprite.image.height * ballSprite.scale);
+    pop();
+  }
 
-  drawBall(ballX, ballY);
-  if (isBallOffScreen(ballX, ballY)) endGame();
+  // draw fallback plain hoops if using plain array
+  if (Array.isArray(hoopGroup)) {
+    for (let h of hoopGroup) {
+      if (h.image) {
+        push();
+        imageMode(CENTER);
+        image(h.image, h.x, h.y, h.image.width * (h.scale ?? 1), h.image.height * (h.scale ?? 1));
+        pop();
+      }
+    }
+  }
 
-  // draw strikes counter
+  drawHud();
+}
+
+function checkHoopCollisions() {
+  if (!ballSprite || !hoopGroup) return;
+
+  for (let i = hoopGroup.length - 1; i >= 0; i--) {
+    const hoop = hoopGroup[i];
+    if (hoop.passed) continue;
+
+    const hoopX = (typeof hoop.x === 'number') ? hoop.x : (hoop.position?.x ?? 0);
+    const hoopY = (typeof hoop.y === 'number') ? hoop.y : (hoop.position?.y ?? 0);
+    const hoopW = hoop.width ?? (hoop.image ? (hoop.image.width * (hoop.scale ?? 1)) : 0);
+    const hoopH = hoop.height ?? (hoop.image ? (hoop.image.height * (hoop.scale ?? 1)) : 0);
+
+    const ballX = ballSprite.x ?? ballSprite.position?.x ?? ballSprite.x;
+    const ballY = ballSprite.y ?? ballSprite.position?.y ?? ballSprite.y;
+    const ballW = ballSprite.width ?? (ballSprite.image ? (ballSprite.image.width * (ballSprite.scale ?? 1)) : ballSize);
+    const ballH = ballSprite.height ?? (ballSprite.image ? (ballSprite.image.height * (ballSprite.scale ?? 1)) : ballSize);
+
+    const overlapX = Math.abs(ballX - hoopX) < (ballW * 0.5 + hoopW * 0.4);
+    const overlapY = Math.abs(ballY - hoopY) < (hoopH * 0.35 + ballH * 0.5);
+
+    if (overlapX && overlapY) {
+      handleHoopCollision(ballSprite, hoop);
+    }
+  }
+}
+
+function handleHoopCollision(ball, hoop) {
+  if (hoop.passed) return;
+  hoop.passed = true;
+
+  const scoreZone = hoopHeight * height * hoopHitbox;
+  const verticalDistance = Math.abs(ball.y - hoop.y);
+  if (verticalDistance <= scoreZone) {
+    score += 1;
+  } else {
+    strikes += 1;
+    if (strikes >= maxStrikes) {
+      endGame();
+    }
+  }
+
+  // remove hoop from world (q5play or plain array)
+  if (typeof hoop.delete === 'function') {
+    hoop.delete();
+  } else if (Array.isArray(hoopGroup)) {
+    const idx = hoopGroup.indexOf(hoop);
+    if (idx >= 0) hoopGroup.splice(idx, 1);
+  }
+}
+
+function drawHud() {
   push();
   fill(255);
   stroke(0);
   strokeWeight(2);
   textSize(28);
   textAlign(LEFT, TOP);
-  text(`Strikes: ${strikes}/${threeStrikes}`, 12, 12);
+  text(`Strikes: ${strikes}/${maxStrikes}`, 12, 12);
   pop();
 
-  // draw score (top-right)
   push();
   fill(255);
   stroke(0);
@@ -208,54 +292,52 @@ function draw() {
   pop();
 }
 
-
 function keyPressed() {
   if (!gameStarted) return;
   if (key === ' ') {
-    ballVelocityY = jump;
+    ballVy = jumpForce;
   }
 }
 
+function spawnHoop() {
+  const SpriteClass = getSpriteClass();
+  const hoopY = random(hoopMin * height, hoopMax * height);
+  if (!SpriteClass) return;
 
-function drawBall(x, y) {
-  if (ballImage) image(ballImage, x, y, ballSize, ballSize);
-  else {
-    push();
-    noStroke();
-    fill(255, 140, 0);
-    ellipse(x, y, ballSize, ballSize);
-    pop();
+  const hoop = new SpriteClass(hoopImage, width + 120, hoopY);
+  const targetHeight = height * hoopHeight;
+  hoop.scale = targetHeight / hoopImage.height * 1.1;
+  hoop.passed = false;
+  if (hoopGroup && typeof hoopGroup.push === 'function') {
+    hoopGroup.push(hoop);
   }
 }
 
+function clearHoops() {
+  if (!hoopGroup) return;
+  if (typeof hoopGroup.removeAll === 'function') {
+    hoopGroup.removeAll();
+  } else if (typeof hoopGroup.deleteAll === 'function') {
+    hoopGroup.deleteAll();
+  } else {
+    hoopGroup.length = 0;
+  }
+}
 
 function isBallOffScreen(x, y) {
-  
   if (y < -ballSize) return true;
   if (y > height + ballSize) return true;
   return false;
 }
-
-
-function spawnHoop() {
-  // place new hoop just off the right edge in world coordinates
-  const worldPos = worldX + width + 120;
-  const y = random(hoopMin * height, hoopMax * height);
-  hoops.push({ worldX: worldPos, y: y, passed: false });
-}
-
-
-
-
 function showScreen(id) {
   const el = document.getElementById(id);
   if (el) el.classList.remove('hidden');
 }
+
 function hideScreen(id) {
   const el = document.getElementById(id);
   if (el) el.classList.add('hidden');
 }
-
 
 const startButton = document.getElementById('start-button');
 if (startButton) startButton.addEventListener('click', startGame);
