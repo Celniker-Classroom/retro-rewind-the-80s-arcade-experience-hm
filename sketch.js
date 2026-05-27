@@ -28,7 +28,8 @@ const hoopSpacing = 500;
 const hoopMin = 0.18;
 const hoopMax = 0.78;
 const hoopHeight = 0.18;
-const hoopHitbox = 0.25;
+// Vertical scoring tolerance 
+const hoopHitbox = 1;
 const HoopHitboxReduction = 0.7;
 
 let strikes = 0;
@@ -39,7 +40,7 @@ const ballSize = 72;
 const gravity = 0.8;
 const jumpForce = -12;
 const minHorizontalSpeed = 5;
-const maxHorizontalSpeed = 30;
+const maxHorizontalSpeed = 100;
 const speedIncreasePerPoint = 0.15;
 const ballLocation = 0.3;
 
