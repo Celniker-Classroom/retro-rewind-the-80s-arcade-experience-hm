@@ -250,17 +250,21 @@ function checkHoopCollisions() {
 
 function handleHoopCollision(ball, hoop) {
   if (hoop.passed) return;
-  hoop.passed = true;
 
+  // Only evaluate scoring when the ball has passed the hoop horizontally
+  const hoopX = (typeof hoop.x === 'number') ? hoop.x : (hoop.position?.x ?? 0);
+  const ballX = ball.x ?? ball.position?.x ?? 0;
+  if (ballX < hoopX) return; // wait until the ball is past the hoop center
+
+  hoop.passed = true;
   const scoreZone = hoopHeight * height * hoopHitbox;
-  const verticalDistance = Math.abs(ball.y - hoop.y);
+  const hoopY = (typeof hoop.y === 'number') ? hoop.y : (hoop.position?.y ?? 0);
+  const verticalDistance = Math.abs((ball.y ?? ball.position?.y ?? 0) - hoopY);
   if (verticalDistance <= scoreZone) {
     score += 1;
   } else {
     strikes += 1;
-    if (strikes >= maxStrikes) {
-      endGame();
-    }
+    if (strikes >= maxStrikes) endGame();
   }
 
   // remove hoop from world (q5play or plain array)
